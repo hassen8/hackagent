@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+MANIFEST="$1"; shift; PROJECT_DIR="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"; SCRIPT_DIR="$PROJECT_DIR/experiments/campaign/shared_gpu"; cd "$PROJECT_DIR"; PAIR="$(PYTHONDONTWRITEBYTECODE=1 uv run --no-sync python "$SCRIPT_DIR/plan_qwen38_pairs.py" --manifest "$MANIFEST" | python -c 'import json,sys;print(json.dumps(json.load(sys.stdin)["pairs"][int(sys.argv[1])]))' "$SLURM_ARRAY_TASK_ID")"; A="$(python -c 'import json,sys;print(json.load(sys.stdin)["shard_a"])' <<<"$PAIR")"; B="$(python -c 'import json,sys;print(json.load(sys.stdin)["shard_b"])' <<<"$PAIR")"; exec bash "$SCRIPT_DIR/submit_qwen38_bf16_pair.slurm" "$MANIFEST" --shard-a "$A" --shard-b "$B" "$@"
